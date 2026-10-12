@@ -47,9 +47,11 @@ It runs full-screen and works offline.
 
 ## Your data
 
-- Everything is saved **on your device only**, in browser `localStorage`. There's no account, no server and no tracking.
-- App updates keep your data, as long as the web address stays the same.
-- Deleting the home-screen app, or clearing the browser's site data, **erases your progress**. Use **Me → Export** now and then to save a backup file, and **Import** to restore it on any device.
+- **Saved on your phone first.** Everything works offline, and the phone's copy is what the app reads from.
+- **Cloud sync with a private code.** No account or login. The app gives you a code like `mango-koala-gqhx3-ucg5h` and backs up every change automatically. On a new phone, or after reinstalling, tap **"restore with your sync code"** on the first screen.
+- If two devices edit at the same time, they merge day by day, so neither one wipes the other.
+- The code is the only key. The server stores data under a SHA-256 hash of it and never keeps the code itself. **Keep your code private: anyone who has it can read your progress.**
+- **Me → Export / Import** still gives you a plain JSON backup file if you want one.
 
 ## Make it yours
 
@@ -69,6 +71,8 @@ index.html            app shell + shared SVG filters (ink wobble, hatching)
 data.js               game content: stats, habits, quests, bosses, achievements
 art.js                hand-drawn SVG art: Xiaohei, plant, pot, bosses, icons, scenes
 app.js                state, XP/levels, streaks, bonuses, views, events
+sync.js               cloud sync client: debounced push, pull + per-day merge, offline retry
+api/sync.js           Vercel function: GET/PUT one blob per code in Upstash Redis (compare-and-set)
 styles.css            paper-and-ink styling + animations
 sw.js                 service worker (offline cache)
 manifest.webmanifest  PWA manifest
@@ -87,6 +91,8 @@ python3 -m http.server 5173
 Then open http://localhost:5173.
 
 ## Deploy
+
+Cloud sync needs an **Upstash Redis** database connected to the Vercel project (Vercel → Storage → Upstash). Connecting it sets `KV_REST_API_URL` and `KV_REST_API_TOKEN`. Without it the app still works, but data stays on the device only.
 
 ```bash
 npx vercel@latest deploy --prod

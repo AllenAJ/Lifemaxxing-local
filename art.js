@@ -44,6 +44,8 @@ const ICONS = {
   nail: 'M8.5 21.5V11a3.5 3.5 0 0 1 7 0v10.5M10 9.2c.9-.9 3.1-.9 4 0',
   shoe: 'M2.5 17.5V9l4 1.2 2.8-3.7 4.4 4.8 6.3 2.5c.9.4 1.5 1.2 1.5 2.2v1.5zM2.5 17.5h18.5M10 11l1.5-1.5M12 13l1.5-1.5',
   broom: 'M15 2.5 11 12M7 12h8l3 9H4zM9 16.5 8 21M12.5 16.5V21',
+  cloud: 'M7 18.5a4.5 4.5 0 0 1-.7-8.9 6 6 0 0 1 11.5-1.4 4.6 4.6 0 0 1-.3 10.3z',
+  key: 'M7.5 15.5a4 4 0 1 1 0-8 4 4 0 0 1 0 8zM11.5 11.5h9.5M17.5 11.5v3.5M20.5 11.5v2.5',
   info: 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM12 11v5.5M12 7.8v.4',
 };
 function icon(name, { size = 20, color = 'currentColor', sw = 1.8, cls = '', fill = 'none' } = {}) {
@@ -230,6 +232,17 @@ function perfectScene(L) {
     ${ground(20, 280, 206)}${plant(190, 170, Math.max(L, 6), { bloom: 2 })}${pot(190, 206)}
     ${xh({ x: 92, y: 206, s: .9, pose: 'sit' })}
     <text x="210" y="44" class="hand" font-size="24" fill="${RED}">flawless</text>
+  </g></svg>`;
+}
+function keyScene() {
+  return `<svg class="scene" viewBox="0 0 300 200"><g filter="url(#wob)">
+    ${ground(20, 280, 188)}
+    ${xh({ x: 96, y: 188, s: .92, pose: 'carry' })}
+    <circle cx="96" cy="94" r="13" fill="#fff" stroke="${INK}" stroke-width="2.4"/><circle cx="96" cy="94" r="4" fill="${INK}"/>
+    <path d="M109 94h36M136 94v9M144 94v7" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M206 92a17 17 0 0 1 6-33 23 23 0 0 1 42-7 17 17 0 0 1 16 40z" fill="#fff" stroke="${INK}" stroke-width="2.2" stroke-linejoin="round"/>
+    ${arrow('M152 80Q176 46 204 66', 'M193 64 204 66 201 56')}
+    <text x="214" y="122" class="hand" font-size="20" fill="${BLUE}">safe up here</text>
   </g></svg>`;
 }
 function bossDownScene(b) { return bossScene({ ...b, defeated: true }); }

@@ -264,3 +264,13 @@ select.inp { appearance: none; -webkit-appearance: none; }
 .tile.done .tn { color: var(--soft); }
 .every { font-size: 16px; font-weight: 700; color: var(--orange); white-space: nowrap; }
 .hs.late { color: var(--red); }
+
+/* cloud sync */
+.synchead { display: flex; align-items: center; gap: 8px; }
+.syncstat { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--soft); }
+.syncstat.synced { color: var(--green); } .syncstat.offline, .syncstat.error, .syncstat.noserver { color: var(--red); } .syncstat.syncing { color: var(--blue); }
+.code { font-size: 27px; font-weight: 700; text-align: center; margin: 12px 0 2px; padding: 8px; border: 1.5px dashed var(--ink); border-radius: var(--sketch); letter-spacing: .5px; word-break: break-all; user-select: all; -webkit-user-select: all; }
+.modal .code { font-size: 25px; margin: 2px 0 8px; }
+.syncbox .pr { border-bottom: 0; }
+.linkbtn { display: block; margin: 16px auto 0; font-size: 19px; color: var(--blue); text-decoration: underline wavy #b9c8e8 1.2px; text-underline-offset: 4px; }
+.restore { margin-top: 14px; }

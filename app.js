@@ -44,14 +44,16 @@ function migrate(s) {
 }
 const UPKEEP_V1 = ['teeth', 'shower', 'trim', 'nails', 'haircut', 'shoes', 'room'];
 function load() { try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.v === 1) return migrate(s); } catch (e) {} return fresh(); }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { toast('Could not save'); } }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { toast('Could not save'); } markDirty(); }
+const touch = () => { state.mt = Date.now(); }; // settings/profile/habit-list changed (sync merge: newest wins)
 
 let state = load();
 const ui = { tab: 'today', day: 't', onboard: 0, just: null, anim: '' };
 const app = document.getElementById('app');
 const EMPTY = { done: {}, quests: {}, bonus: {}, m: {}, note: '' };
 
-function getDay(k) { const e = state.log[k] || (state.log[k] = {}); e.done ||= {}; e.quests ||= {}; e.bonus ||= {}; e.m ||= {}; e.note ??= ''; return e; }
+function getDay(k) { const e = state.log[k] || (state.log[k] = {}); e.t = Date.now(); // getDay = about to mutate this day
+  e.done ||= {}; e.quests ||= {}; e.bonus ||= {}; e.m ||= {}; e.note ??= ''; return e; }
 const peek = k => state.log[k] || EMPTY;
 const viewDay = () => ui.day === 'y' ? addDays(today(), -1) : today();
 
@@ -231,19 +233,23 @@ function modalHTML(m) {
     case 'perfect': return `${perfectScene(LV(totals().total).L)}<h2 class="hand">+50 xp</h2><p>every habit, done in full.</p>`;
     case 'boss': return `${bossDownScene(m.boss)}<h2 class="hand">${esc(m.boss.name)}, down</h2><p>+150 xp</p>`;
     case 'ach': return `<div class="stampbig">${stamp(m.a.icon, { size: 132 })}</div><h2 class="hand">${esc(m.a.name)}</h2><p>${esc(m.a.desc)}</p>`;
+    case 'synccode': return `${keyScene()}<h2 class="hand">your sync code</h2><div class="code hand">${esc(sync.code)}</div><p>it backs up everything and restores it on any phone. save it in your notes.</p>`;
     case 'welcome': return `${seedScene()}<h2 class="hand">+50 xp head start</h2><p>${state.settings.minDaily} habits today and it blooms.</p>`;
   }
 }
 function pump() {
   if (modalOpen || !modalQ.length) return;
-  const m = modalQ.shift(); modalOpen = true;
+  const m = modalQ.shift();
+  let body; try { body = modalHTML(m); } catch (e) { console.error(e); return pump(); } // a broken modal must never block the queue
+  modalOpen = true;
   const el = document.createElement('div'); el.className = 'modal-wrap';
-  el.innerHTML = `<div class="modal">${modalHTML(m)}<button class="btn primary" data-close>${m.type === 'chest' ? 'claim' : 'nice'}</button></div>`;
+  el.innerHTML = `<div class="modal">${body}<button class="btn primary" data-close ${m.type === 'synccode' ? 'data-copy' : ''}>${m.type === 'chest' ? 'claim' : m.type === 'synccode' ? 'copy code' : 'nice'}</button></div>`;
   document.body.appendChild(el);
   requestAnimationFrame(() => el.classList.add('in'));
   if (m.type === 'level' || m.type === 'boss' || m.type === 'perfect') { confetti(); sfx('level'); buzz([30, 50, 30, 50, 60]); }
   else if (m.type === 'chest' || m.type === 'ach') { sfx('chest'); buzz([20, 30, 20]); }
   el.addEventListener('click', ev => {
+    if (ev.target.closest('[data-copy]')) copySyncCode();
     if (ev.target.closest('[data-close]') || ev.target === el) { el.remove(); modalOpen = false; setTimeout(pump, 120); }
   });
 }
@@ -496,7 +502,18 @@ function vMe() {
         ${isOn(h) ? `<input class="cue hand" data-field="cue:${h.id}" value="${esc(cueOf(h))}" placeholder="after I ___, I will…">` : ''}
       </div>`).join('')}</div>`;
   }).join('');
-  return `<h1 class="title hand">me</h1>
+  const syncPanel = `<section class="sheet syncbox">
+      <div class="synchead">${icon('cloud', { size: 22, color: sync.code ? BLUE : '#aaa' })}<b>cloud sync</b><span id="syncstat" class="syncstat ${sync.status}">${syncStatusText()}</span></div>
+      ${sync.code ? `<div class="code hand">${esc(sync.code)}</div>
+        <div class="row2"><button class="btn" data-act="sync-copy">${icon('key', { size: 16 })} copy code</button><button class="btn" data-act="sync-now">${icon('loop', { size: 16 })} sync now</button></div>`
+      : `<button class="btn primary" data-act="sync-on">turn on sync</button>`}
+      <details class="pr"><summary>use a code from another device</summary>
+        <input class="inp" id="sync-in" placeholder="word-word-xxxxx-xxxxx" autocapitalize="off" autocomplete="off" spellcheck="false" style="margin-top:8px">
+        <button class="btn" data-act="sync-link">connect</button></details>
+      <p class="muted small">your code is the key to your data. keep it private. anyone with it can read your progress.</p>
+      ${sync.code ? '<button class="btn danger" data-act="sync-off">turn off on this device</button>' : ''}
+    </section>`;
+  return `<h1 class="title hand">me</h1>${syncPanel}
     ${!standalone ? `<section class="sheet install">${icon('download', { size: 20, color: ORANGE })}<div><b>add to home screen</b><div class="muted small">${ios ? 'safari → share → add to home screen' : 'browser menu → install app'}</div></div>${deferredInstall ? '<button class="btn primary sm" data-act="install">install</button>' : ''}</section>` : ''}
     <section class="sheet">
       <label class="lbl hand">name</label><input class="inp" data-field="name" value="${esc(state.profile.name)}" maxlength="30">
@@ -533,7 +550,9 @@ function vOnboard() {
     <p class="lead">grow a better you,<br>one habit at a time.</p>
     <div class="pills"><span>${icon('up', { size: 15, color: ORANGE })} xp</span><span>${icon('flame', { size: 15, color: RED })} streaks</span><span>${icon('sword', { size: 15, color: BLUE })} bosses</span></div>
     <input class="inp" id="ob-name" value="${esc(state.profile.name)}" placeholder="your name" maxlength="30">
-    <button class="btn primary" data-act="ob-next">plant the seed</button></div>`;
+    <button class="btn primary" data-act="ob-next">plant the seed</button>
+    ${ui.restore ? `<div class="restore"><input class="inp" id="sync-in" placeholder="word-word-xxxxx-xxxxx" autocapitalize="off" autocomplete="off" spellcheck="false"><button class="btn" data-act="sync-link">restore my progress</button></div>`
+      : `<button class="linkbtn hand" data-act="ob-restore">already playing? restore with your sync code</button>`}</div>`;
   if (s === 1) return `<div class="ob">${dots}${mirrorScene()}
     <h1 class="hand">who are you becoming?</h1>
     <div class="idlist">${IDENTITIES.map((t, i) => `<button class="chip ${state.profile.identity === t ? 'on' : ''}" data-act="ob-id" data-id="${i}">…${esc(t)}</button>`).join('')}</div>
@@ -573,33 +592,39 @@ app.addEventListener('click', ev => {
     case 'tab': ui.tab = id; ui.day = 't'; render(); scrollTo(0, 0); return;
     case 'day': ui.day = id; return render();
     case 'energy': { const e = getDay(today()); e.m.energy = e.m.energy === id ? '' : id; save(); checkAch(); render(); pump(); return; }
-    case 'min': state.settings.minDaily = Math.max(1, Math.min(10, state.settings.minDaily + Number(id))); save(); return render();
-    case 'set': state.settings[id] = !state.settings[id]; save(); return render();
-    case 'units': state.settings.units = id; save(); return render();
-    case 'habit-onoff': { const before = snap(); const h = state.habits[id] || (state.habits[id] = { cue: '' }); h.on = !h.on; syncBonuses(today()); return commit(before); }
-    case 'del-custom': if (confirm('Delete this habit? Past XP is kept.')) { state.custom = state.custom.filter(h => h.id !== id); delete state.habits[id]; save(); render(); } return;
+    case 'min': touch(); state.settings.minDaily = Math.max(1, Math.min(10, state.settings.minDaily + Number(id))); save(); return render();
+    case 'set': touch(); state.settings[id] = !state.settings[id]; save(); return render();
+    case 'units': touch(); state.settings.units = id; save(); return render();
+    case 'habit-onoff': { touch(); const before = snap(); const h = state.habits[id] || (state.habits[id] = { cue: '' }); h.on = !h.on; syncBonuses(today()); return commit(before); }
+    case 'del-custom': if (confirm('Delete this habit? Past XP is kept.')) { touch(); state.custom = state.custom.filter(h => h.id !== id); delete state.habits[id]; save(); render(); } return;
     case 'add-custom': {
       const name = document.getElementById('nh-name').value.trim(); if (!name) return toast('give it a name first');
       const h = { id: 'c_' + Date.now().toString(36), stat: document.getElementById('nh-stat').value, xp: Number(document.getElementById('nh-xp').value), name, mini: document.getElementById('nh-mini').value.trim(), custom: true };
       const every = Number(document.getElementById('nh-every').value); if (every > 1) { h.every = every; h.short = name.toLowerCase().slice(0, 12); h.icon = 'sun'; h.mini = ''; }
-      state.custom.push(h); state.habits[h.id] = { on: true, cue: '' }; save(); toast('habit added'); return render();
+      state.custom.push(h); state.habits[h.id] = { on: true, cue: '' }; touch(); save(); toast('habit added'); return render();
     }
+    case 'sync-on': enableSync(); render(); pump(); return;
+    case 'sync-off': if (confirm('Stop syncing this device? Your cloud copy stays safe under the code.')) { disableSync(); render(); } return;
+    case 'sync-copy': return copySyncCode();
+    case 'sync-now': return syncPull();
+    case 'sync-link': return linkSyncCode(document.getElementById('sync-in')?.value);
+    case 'ob-restore': ui.restore = true; render(); document.getElementById('sync-in')?.focus(); return;
     case 'export': return exportData();
     case 'import': return document.getElementById('imp').click();
-    case 'reset': if (confirm('Erase ALL progress? This cannot be undone.') && confirm('Really? Export a backup first if unsure.')) { localStorage.removeItem(KEY); state = fresh(); ui.onboard = 0; ui.tab = 'today'; render(); } return;
+    case 'reset': if (confirm('Erase all progress on this device?') && confirm(sync.code ? 'Sync will be turned off here. Your cloud copy stays restorable with your code.' : 'Really? This cannot be undone.')) { disableSync(); localStorage.removeItem(KEY); state = fresh(); ui.onboard = 0; ui.tab = 'today'; render(); } return;
     case 'install': if (deferredInstall) { deferredInstall.prompt(); deferredInstall = null; } return;
     case 'ob-next': {
       const n = document.getElementById('ob-name'), i = document.getElementById('ob-identity');
       if (n) state.profile.name = n.value.trim(); if (i) state.profile.identity = i.value.trim();
-      ui.onboard++; save(); render(); scrollTo(0, 0); return;
+      ui.onboard++; touch(); save(); render(); scrollTo(0, 0); return;
     }
     case 'ob-back': { const i = document.getElementById('ob-identity'); if (i) state.profile.identity = i.value.trim(); ui.onboard--; return render(); }
-    case 'ob-id': state.profile.identity = IDENTITIES[id]; return render();
-    case 'ob-habit': state.habits[id].on = !state.habits[id].on; buzz(8); return render();
+    case 'ob-id': touch(); state.profile.identity = IDENTITIES[id]; return render();
+    case 'ob-habit': touch(); state.habits[id].on = !state.habits[id].on; buzz(8); return render();
     case 'ob-finish': {
-      state.onboarded = true; state.created = today();
+      state.onboarded = true; state.created = today(); touch();
       getDay(today()).bonus.starter = { xp: 50, label: 'Starter bonus' };
-      save(); queue({ type: 'welcome' }); render(); pump(); scrollTo(0, 0); return;
+      queue({ type: 'welcome' }); if (!sync.code) enableSync(); save(); render(); pump(); scrollTo(0, 0); return;
     }
   }
 });
@@ -608,9 +633,12 @@ app.addEventListener('change', ev => {
   const v = ev.target.value;
   if (f === 'note') getDay(viewDay()).note = v.slice(0, 280);
   else if (f.startsWith('m.')) getDay(today()).m[f.slice(2)] = v;
-  else if (f === 'name') state.profile.name = v.trim().slice(0, 30);
-  else if (f === 'identity') state.profile.identity = v.trim().slice(0, 140);
-  else if (f.startsWith('cue:')) { const id = f.slice(4); state.habits[id] = { ...(state.habits[id] || { on: false }), cue: v.trim().slice(0, 100) }; }
+  else {
+    touch();
+    if (f === 'name') state.profile.name = v.trim().slice(0, 30);
+    else if (f === 'identity') state.profile.identity = v.trim().slice(0, 140);
+    else if (f.startsWith('cue:')) { const id = f.slice(4); state.habits[id] = { ...(state.habits[id] || { on: false }), cue: v.trim().slice(0, 100) }; }
+  }
   save(); checkAch(); pump(); // no re-render: keeps keyboard focus while moving between fields
 });
 
@@ -626,7 +654,7 @@ document.getElementById('imp').addEventListener('change', async ev => {
     const s = JSON.parse(await file.text());
     if (s?.v !== 1 || typeof s.log !== 'object') throw new Error('bad');
     if (!confirm('Replace your current data with this backup?')) return;
-    state = migrate(s); save(); render(); toast('backup restored');
+    state = migrate(s); touch(); save(); render(); toast('backup restored');
   } catch (e) { toast('not a valid lifemax backup'); }
 });
 
@@ -638,3 +666,5 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.ser
 navigator.storage?.persist?.().catch(() => {});
 
 render();
+if (sync.code) syncPull();
+else if (state.onboarded) { enableSync(); pump(); }
