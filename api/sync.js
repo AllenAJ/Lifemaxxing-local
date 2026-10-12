@@ -3,8 +3,10 @@
 // Writes are compare-and-set on a revision number, so two devices can't silently overwrite each other.
 import { createHash } from 'node:crypto';
 
-const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+// Vercel's Upstash integration may prefix the vars (e.g. lifemax_KV_REST_API_URL), so match by suffix.
+const env = suffix => Object.entries(process.env).find(([k]) => k === suffix || k.endsWith('_' + suffix))?.[1];
+const REDIS_URL = env('KV_REST_API_URL') || env('UPSTASH_REDIS_REST_URL');
+const REDIS_TOKEN = env('KV_REST_API_TOKEN') || env('UPSTASH_REDIS_REST_TOKEN');
 const CODE_RE = /^[a-z]+-[a-z]+-[a-z2-9]{5}-[a-z2-9]{5}$/;
 const MAX_BYTES = 2_000_000;
 const CAS = `local rev = tonumber(redis.call('GET', KEYS[2]) or '0')
