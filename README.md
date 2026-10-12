@@ -55,7 +55,7 @@ It runs full-screen and works offline.
 
 All game content lives in [`data.js`](data.js). You can edit it freely:
 
-- `HABITS`: daily habits (`mini` is the ½ version) and upkeep habits (`every: <days>`)
+- `HABITS`: daily habits (e.g. AM and PM brushing are separate) (`mini` is the ½ version) and upkeep habits (`every: <days>`)
 - `QUESTS`, `BOSSES`, `WISDOM`, `SAYINGS` (Xiaohei's lines), `RANKS`, `ACHIEVEMENTS`
 
 You can also add your own habits, daily or on a timer, from inside the app under **Me → New habit**.

@@ -25,7 +25,7 @@ function fresh() {
     v: 1, onboarded: false, created: today(),
     profile: { name: '', identity: IDENTITIES[0] },
     habits: Object.fromEntries(HABITS.map(h => [h.id, { on: !!h.def, cue: h.cue || '' }])),
-    custom: [], log: {}, ach: {}, flags: { upkeep1: true },
+    custom: [], log: {}, ach: {}, flags: { upkeep1: true, teeth2: true },
     settings: { minDaily: 3, sound: true, haptics: true, units: 'metric' },
   };
 }
@@ -36,6 +36,8 @@ function migrate(s) {
   s.habits = { ...Object.fromEntries(HABITS.map(h => [h.id, { on: false, cue: h.cue || '' }])), ...s.habits };
   s.custom = s.custom || []; s.log = s.log || {}; s.ach = s.ach || {}; s.flags = s.flags || {};
   if (!s.flags.upkeep1) { for (const id of UPKEEP_V1) s.habits[id].on = true; s.flags.upkeep1 = true; }
+  // teeth was split into AM + PM: PM follows whatever the old combined habit was set to
+  if (!s.flags.teeth2) { s.habits.teethpm = { ...s.habits.teethpm, on: !!s.habits.teeth?.on }; s.flags.teeth2 = true; }
   const first = Object.keys(s.log).sort()[0];
   if (!s.created || (first && first < s.created)) s.created = first || today();
   return s;

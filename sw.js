@@ -1,5 +1,5 @@
 // Bump CACHE when you change any file so phones pick up the new version.
-const CACHE = 'lifemax-v5';
+const CACHE = 'lifemax-v6';
 const ASSETS = ['./', './index.html', './styles.css', './data.js', './art.js', './app.js', './manifest.webmanifest',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 

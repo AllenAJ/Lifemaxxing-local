@@ -25,7 +25,8 @@ const HABITS = [
 
   { id: 'skinam',   stat: 'AES', xp: 10, def: true,  name: 'AM skin: cleanse + SPF',      mini: 'SPF only',                    cue: 'After I brush my teeth, I apply SPF' },
   { id: 'skinpm',   stat: 'AES', xp: 10, def: false, name: 'PM skin: cleanse + moisturize', mini: 'Rinse face',                cue: '' },
-  { id: 'teeth',    stat: 'AES', xp: 10, def: true,  name: 'Dental: brush 2× + floss',    mini: 'Floss once',                  cue: '' },
+  { id: 'teeth',    stat: 'AES', xp: 5,  def: true,  name: 'Brush teeth (AM)',            mini: '30-second brush',             cue: 'After I wake up, I brush before anything else' },
+  { id: 'teethpm',  stat: 'AES', xp: 10, def: true,  name: 'Brush + floss (PM)',          mini: 'Just brush',                  cue: 'Before bed, I brush and floss' },
   { id: 'shower',   stat: 'AES', xp: 5,  def: true,  name: 'Shower',                      mini: 'Quick rinse',                 cue: '' },
   { id: 'water',    stat: 'AES', xp: 10, def: false, name: '2.5L water',                  mini: 'A glass right after waking',  cue: '' },
   { id: 'hair',     stat: 'AES', xp: 5,  def: false, name: 'Hair styled and groomed',     mini: 'Comb + product',              cue: '' },
